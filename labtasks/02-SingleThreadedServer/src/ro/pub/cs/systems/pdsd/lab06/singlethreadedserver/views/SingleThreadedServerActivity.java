@@ -17,6 +17,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
 
+
 public class SingleThreadedServerActivity extends Activity {
 	
 	private EditText serverTextEditText;
@@ -49,6 +50,41 @@ public class SingleThreadedServerActivity extends Activity {
 		}
 		
 	}
+	
+	class CommunicationThread extends Thread {
+		  private Socket socket;
+		 
+		  public CommunicationThread(Socket socket) {
+		    this.socket = socket;
+		  }
+		 
+		  public void run() {
+				Log.v(Constants.TAG, "Connection opened with "+socket.getInetAddress()+":"+socket.getLocalPort());
+				PrintWriter printWriter = null;
+				try {
+					printWriter = Utilities.getWriter(socket);
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				printWriter.println(serverTextEditText.getText().toString());
+				
+		    	  try {
+					Thread.sleep(3000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		    	  
+		    	try {
+					socket.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				Log.v(Constants.TAG, "Connection closed");
+		      }
+		}
 	
 	private class ServerThread extends Thread {
 		
@@ -88,11 +124,8 @@ public class SingleThreadedServerActivity extends Activity {
 				serverSocket = new ServerSocket(Constants.SERVER_PORT);
 				while (isRunning) {
 					Socket socket = serverSocket.accept();
-					Log.v(Constants.TAG, "Connection opened with "+socket.getInetAddress()+":"+socket.getLocalPort());
-					PrintWriter printWriter = Utilities.getWriter(socket);
-					printWriter.println(serverTextEditText.getText().toString());
-					socket.close();
-					Log.v(Constants.TAG, "Connection closed");
+					
+					new CommunicationThread(socket).start();
 				}
 			} catch (IOException ioException) {
 				Log.e(Constants.TAG, "An exception has occurred: "+ioException.getMessage());
@@ -129,5 +162,11 @@ public class SingleThreadedServerActivity extends Activity {
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+	
+	@Override
+	public void onDestroy() {
+	  super.onDestroy();
+	  singleThreadedServer.stopServer();
 	}
 }

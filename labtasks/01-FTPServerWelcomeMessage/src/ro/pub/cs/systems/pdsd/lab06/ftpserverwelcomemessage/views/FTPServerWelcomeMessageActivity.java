@@ -1,7 +1,11 @@
 package ro.pub.cs.systems.pdsd.lab06.ftpserverwelcomemessage.views;
 
+import java.io.BufferedReader;
+import java.net.Socket;
+
 import ro.pub.cs.systems.pdsd.lab06.ftpserverwelcomemessage.R;
 import ro.pub.cs.systems.pdsd.lab06.ftpserverwelcomemessage.general.Constants;
+import ro.pub.cs.systems.pdsd.lab06.ftpserverwelcomemessage.general.Utilities;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,6 +20,7 @@ public class FTPServerWelcomeMessageActivity extends Activity {
 	
 	private EditText FTPServerAddressEditText;
 	private TextView welcomeMessageTextView;
+	String textView;
 	
 	protected class FTPServerCommunicationThread extends Thread {
 		
@@ -32,6 +37,34 @@ public class FTPServerWelcomeMessageActivity extends Activity {
 				// - the value does not start with Constants.FTP_MULTILINE_START_CODE2
 				// append the line to the welcomeMessageTextView text view content (on the UI thread!!!)
 				// close the socket
+				String hostname = FTPServerAddressEditText.getText().toString();
+				String line;
+				Socket socket = new Socket (
+				          hostname,
+				          Constants.FTP_PORT
+				        );
+		        BufferedReader bufferedReader = Utilities.getReader(socket);
+		        if ((line = bufferedReader.readLine()) != null) {
+		        	if (line.startsWith(Constants.FTP_MULTILINE_START_CODE)) {
+		        		while ((line = bufferedReader.readLine()) != null) {
+		        			if (line.compareTo(Constants.FTP_MULTILINE_END_CODE1) == 0)
+		        				break;
+		        			if (line.startsWith(Constants.FTP_MULTILINE_END_CODE2))
+		        				break;
+		        			
+		        			textView = welcomeMessageTextView.getText().toString();
+		        			textView += line;
+		        			welcomeMessageTextView.post(new Runnable() {
+		        		          @Override
+		        		          public void run() {
+		        		        	  welcomeMessageTextView.setText(textView);
+		        		          }
+		        		        });
+		        				
+		        		}
+		        	}
+		        }
+		        socket.close();
 
 			} catch (Exception exception) {
 				Log.e(Constants.TAG, "An exception has occurred: "+exception.getMessage());
@@ -81,4 +114,6 @@ public class FTPServerWelcomeMessageActivity extends Activity {
 		}
 		return super.onOptionsItemSelected(item);
 	}
+	
+
 }
